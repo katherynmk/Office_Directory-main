@@ -1,6 +1,12 @@
 const express = require('express')
-const app = express()
 var bodyParser = require('body-parser');
+
+const session = require('express-session'); 
+const passport = require('passport');  
+const connectEnsureLogin = require('connect-ensure-login');
+const User = require('./user.js');
+
+const app = express()
 app.use(express.json());
 app.use(bodyParser.urlencoded({extended : true}));
 app.use(bodyParser.json());
@@ -12,56 +18,18 @@ const { name } = require('ejs');
 var mongo = require('mongodb');
 const Professor = require("./models/professor");
 
-//authentication
-/*
-passport = require("passport")
-LocalStrategy = require("passport-local")
-passportLocalMongoose =
-		require("passport-local-mongoose"),
-	User = require("./models/user");
-
-  app.use(require("express-session")({
-    secret: "Rusty is a dog",
-    resave: false,
-    saveUninitialized: false
-  }));
 
 
-app.use(passport.initialize());
-app.use(passport.session());
 
-passport.use(new LocalStrategy(User.authenticate()));
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
-
-//Showing login form
-app.get("/login", function (req, res) {
-	res.render("login");
-});
-
-//Handling user login
-app.post("/login", passport.authenticate("local", {
-	successRedirect: "/secret",
-	failureRedirect: "/login"
-}), function (req, res) {
-});
-
-//Handling user logout
-app.get("/logout", function (req, res) {
-	req.logout();
-	res.redirect("/");
-});
-
-function isLoggedIn(req, res, next) {
-	if (req.isAuthenticated()) return next();
-	res.redirect("/login");
-}
-*/
+const passportLocalMongoose = require('passport-local-mongoose');
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb+srv://lewisTeam:lewis123@information.puksi.mongodb.net/OfficeDirectory?retryWrites=true&w=majority';
 const client = new MongoClient(url);
 const dbName = "OfficeDirectory";
-mongoose.connect('mongodb+srv://lewisTeam:lewis123@information.puksi.mongodb.net/OfficeDirectory?retryWrites=true&w=majority');
+mongoose.connect('mongodb+srv://lewisTeam:lewis123@information.puksi.mongodb.net/OfficeDirectory?retryWrites=true&w=majority', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+});
 const db = mongoose.connection;
 const col = db.collection("professors");
 
@@ -71,10 +39,61 @@ const minorVersion = 2
 
 app.use(express.static(__dirname + '/static'))
 
+/*
+  AUTH CODE IS HERE, based off of https://heynode.com/tutorial/authenticate-users-node-expressjs-and-passportjs/
+*/
+app.use(session({
+  secret: 'r8q,+&1LM3)CD*zAGpx1xm{NeQhc;#', //TODO: This should probably be changed.
+  resave: false,
+  saveUninitialized: true,
+  cookie: { maxAge: 60 * 60 * 1000 } // 1 hour long session.
+}));
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(User.createStrategy());
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 app.set('view engine', 'ejs');
 
 db.once("open", () => {
   console.log("Connected to MongoDB");
+});
+
+
+app.get('/login', (req, res) => {
+  res.sendFile(__dirname + '/static/login.html');
+});
+
+//Handles redirects for when we succeed or fail our login.
+app.post('/login', passport.authenticate('local', { failureRedirect: '/testAuthFail' }),  function(req, res) {
+	console.log(req.user)
+	res.redirect('/testAuth');
+});
+const UserDetails = require('./user');
+
+//THIS CODE ADDS USER
+app.post("/register", function (req, res) {
+  UserDetails.register({ username: req.body.username, active: false }, req.body.password);
+  res.json({"status":"Test"})
+});
+
+//TODO: Example page where you need to be logged in to view. Do what you want here. If someone tries to visit without 
+//being logged in, they will be redirected to login page.
+app.get('/testAuth', connectEnsureLogin.ensureLoggedIn(), (req, res) => {
+  res.send(`Hello ${req.user.username}. Your session ID is ${req.sessionID} 
+   and your session expires in ${req.session.cookie.maxAge} 
+   milliseconds.<br><br>
+   <a href="/logout">Log Out</a><br><br>
+   <a href="/secret">Members Only</a>`);
+});
+
+app.get('/logout', function(req, res) {
+  req.logout();
+  res.redirect('/login');
 });
 
 app.get('/professors',ProfessorController.getAllProfessors, (req,res,next) => {
@@ -87,6 +106,10 @@ app.get('/professors/edit/:name',ProfessorController.getProfessor,(req,res,next)
 
 app.post("/saveprof", ProfessorController.saveProfessor);
 
+//TODO: Does stuff when auth fails. Not sure how you want to display that.
+app.get('/testAuthFail', (req,res,next) => {
+  res.sendFile('static/testAuthFail.html', {root: __dirname });
+});
 
 //Katie and Izzys spot for our authentification linked pages
 //this always directs to views/professors.ejs
