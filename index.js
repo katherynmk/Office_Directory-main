@@ -18,10 +18,8 @@ const { name } = require('ejs');
 var mongo = require('mongodb');
 const Professor = require("./models/professor");
 
-
-
-
 const passportLocalMongoose = require('passport-local-mongoose');
+
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb+srv://lewisTeam:lewis123@information.puksi.mongodb.net/OfficeDirectory?retryWrites=true&w=majority';
 const client = new MongoClient(url);
