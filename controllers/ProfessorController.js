@@ -1,5 +1,3 @@
-//thse are pretty self explanitory
-//please google mongo node functions to learn more
 const Professor = require("../models/professor")
 exports.getAllProfessors = (req,res,next) => {
     Professor.find({},(error,professors) => {

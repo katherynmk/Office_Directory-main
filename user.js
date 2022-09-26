@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const passportLocalMongoose = require('passport-local-mongoose');
 
-mongoose.connect("mongodb+srv://<username>:<password>@cluster0.vvd1s.mongodb.net/?retryWrites=true&w=majority",{
+mongoose.connect('mongodb+srv://lewisTeam:lewis123@information.puksi.mongodb.net/OfficeDirectory?retryWrites=true&w=majority',{
   useNewUrlParser: true,
   useUnifiedTopology: true
 });
