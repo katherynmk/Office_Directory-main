@@ -1,11 +1,16 @@
+//below is some complicated things for node/mongo/passport
+//some of it will be the same for your, some of the things like our
+//controllers such as const User = require('./user.js');, const ProfessorController = require("./controllers/ProfessorController");
+//const Professor = require("./models/professor"); will change for you
+//if you choose to follow the odel view controller theme, please update the 
+//controllers file to work for you
+
 const express = require('express')
 var bodyParser = require('body-parser');
-
 const session = require('express-session'); 
 const passport = require('passport');  
 const connectEnsureLogin = require('connect-ensure-login');
 const User = require('./user.js');
-
 const app = express()
 app.use(express.json());
 app.use(bodyParser.urlencoded({extended : true}));
@@ -19,29 +24,36 @@ var mongo = require('mongodb');
 const Professor = require("./models/professor");
 
 const passportLocalMongoose = require('passport-local-mongoose');
-
+//we use mongo to connect to our database
 var MongoClient = require('mongodb').MongoClient;
-var url = 'mongodb+srv://lewisTeam:lewis123@information.puksi.mongodb.net/OfficeDirectory?retryWrites=true&w=majority';
+//when on mongo, if you click connect and select the second option
+//it will give you your own url for your own database to connect
+var url = "mongodb+srv://lewis:lewis1234@cluster0.vvd1s.mongodb.net/?retryWrites=true&w=majority"
 const client = new MongoClient(url);
 const dbName = "OfficeDirectory";
-mongoose.connect('mongodb+srv://lewisTeam:lewis123@information.puksi.mongodb.net/OfficeDirectory?retryWrites=true&w=majority', {
+mongoose.connect("mongodb+srv://lewis:lewis1234@cluster0.vvd1s.mongodb.net/?retryWrites=true&w=majority", {
   useNewUrlParser: true,
   useUnifiedTopology: true
 });
+
+//we connect to our database, to a collection called 'professors'
 const db = mongoose.connection;
 const col = db.collection("professors");
 
+//basic node things, your local host ports V
 const port = process.env.PORT || 3000
 const majorVersion = 1
 const minorVersion = 2
 
 app.use(express.static(__dirname + '/static'))
+//directs to static folder, automatically opens index,main,login from static,
+//later, ejs will use the 'views' folder, not static
 
 /*
   AUTH CODE IS HERE, based off of https://heynode.com/tutorial/authenticate-users-node-expressjs-and-passportjs/
 */
 app.use(session({
-  secret: 'r8q,+&1LM3)CD*zAGpx1xm{NeQhc;#', //TODO: This should probably be changed.
+  secret: 'r8q,+&1LM3)CD*zAGpx1xm{NeQhc;#', 
   resave: false,
   saveUninitialized: true,
   cookie: { maxAge: 60 * 60 * 1000 } // 1 hour long session.
@@ -56,15 +68,23 @@ passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
 app.set('view engine', 'ejs');
+//ejs is a special version of js in which we can actually get 
+//database variables and display them with basic code
+
+//with this handling method, we are directing our viewing to the views FOLDER
+//all pathing in index.js will automatically look into the views folder for files
+//you do not need to add views to the path
 
 db.once("open", () => {
   console.log("Connected to MongoDB");
 });
+//this connects you to the database, if it is successfull, you should see a message in the terminal
 
 
 app.get('/login', (req, res) => {
   res.sendFile(__dirname + '/static/login.html');
 });
+//here we can see we are looking at the static folder, in the file named login.html
 
 //Handles redirects for when we succeed or fail our login.
 app.post('/login', passport.authenticate('local', { failureRedirect: '/testAuthFail' }),  function(req, res) {
@@ -73,13 +93,12 @@ app.post('/login', passport.authenticate('local', { failureRedirect: '/testAuthF
 });
 const UserDetails = require('./user');
 
-//THIS CODE ADDS USER
+//THIS CODE ADDS USER for authentication
 app.post("/register", function (req, res) {
   UserDetails.register({ username: req.body.username, active: false }, req.body.password);
   res.json({"status":"Test"})
 });
 
-//TODO: Example page where you need to be logged in to view. Do what you want here. If someone tries to visit without 
 //being logged in, they will be redirected to login page.
 app.get('/testAuth', connectEnsureLogin.ensureLoggedIn(), (req, res) => {
   res.send(`Hello ${req.user.username}. Your session ID is ${req.sessionID} 
@@ -94,14 +113,14 @@ app.get('/logout', function(req, res) {
   res.redirect('/login');
 });
 
-app.get('/professors',ProfessorController.getAllProfessors, (req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
+//here if you type into the url http://localhost:3000/professors/edit/Dr. Ray Klump we can see it uses
+//our professor controller has a save professor function in which
+//we search the database by a name, and edit their information and then save that to the database
 
 app.get('/professors/edit/:name',ProfessorController.getProfessor,(req,res,next) => {
   res.render("editprof",{professors:req.data});
 });
-
+//the submit button will post the information to our save professor function and update the database
 app.post("/saveprof", ProfessorController.saveProfessor);
 
 //TODO: Does stuff when auth fails. Not sure how you want to display that.
@@ -109,150 +128,17 @@ app.get('/testAuthFail', (req,res,next) => {
   res.sendFile('static/testAuthFail.html', {root: __dirname });
 });
 
-//Katie and Izzys spot for our authentification linked pages
-//this always directs to views/professors.ejs
-//when you log in, will direct you to your link
-
-app.get('/professors/klump/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("editprof",{professors:req.data});
-});
-app.post("/saveprof", ProfessorController.saveProfessor);
-
-app.get('/professors/ramsey/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-
-app.get('/professors/dupre/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/martinez/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/szczurek/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/stephenson/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/howard/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/khasawneh/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/plass/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/aboumar/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/mkhassaweneh/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/dominiak/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/lewis/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/meyer/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/ngalamou/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/perry/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-app.get('/professors/pogue/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
-});
-
-//this is where the cards are going
-//in the views folder, to every file EXCEPT professors.ejs
-
-
-app.get('/aboumar/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("aboumar",{professors:req.data});
-});
-
-app.get('/al-khassaweneh/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("al-khassaweneh",{professors:req.data});
-});
-
-app.get('/dominiak/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("dominiak",{professors:req.data});
-});
-
-app.get('/dupre/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("dupre",{professors:req.data});
-});
-
-app.get('/harsy/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("harsy",{professors:req.data});
-});
-
-app.get('/howard/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("howard",{professors:req.data});
-});
-
-app.get('/khasawneh/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("khasawneh",{professors:req.data});
-});
+//these are cards for the professors in the database
+//we path to them by going to the static folder
 
 app.get('/kim/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
   res.render("kim",{professors:req.data});
 });
 
-app.get('/lewis/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("lewis",{professors:req.data});
-});
-
-app.get('/martinez/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("martinez",{professors:req.data});
-});
-
-app.get('/meyer/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("meyer",{professors:req.data});
-});
-
-app.get('/ngalamou/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("ngalamou",{professors:req.data});
-});
-
-app.get('/omari/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("omari",{professors:req.data});
-});
-
-app.get('/perry/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("perry",{professors:req.data});
-});
-
-app.get('/plass/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("plass",{professors:req.data});
-});
-
-app.get('/pogue/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("pogue",{professors:req.data});
-});
 
 app.get('/rayklump/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
   res.render("rayklump",{professors:req.data});
 });
-
-app.get('/smith/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("smith",{professors:req.data});
-});
-
-app.get('/stephenson/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("stephenson",{professors:req.data});
-});
-
-app.get('/szczurek/professors/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("szczurek",{professors:req.data});
-});
-
-
 
 
 app.listen(port, () => console.log(
