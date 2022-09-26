@@ -68,7 +68,6 @@ app.get('/login', (req, res) => {
 
 //Handles redirects for when we succeed or fail our login.
 app.post('/login', passport.authenticate('local', { failureRedirect: '/testAuthFail' }),  function(req, res) {
-	console.log(req.user)
 	res.redirect('/testAuth');
 });
 const UserDetails = require('./user');
@@ -79,27 +78,28 @@ app.post("/register", function (req, res) {
   res.json({"status":"Test"})
 });
 
-//TODO: Example page where you need to be logged in to view. Do what you want here. If someone tries to visit without 
-//being logged in, they will be redirected to login page.
 app.get('/testAuth', connectEnsureLogin.ensureLoggedIn(), (req, res) => {
-  res.send(`Hello ${req.user.username}. Your session ID is ${req.sessionID} 
-   and your session expires in ${req.session.cookie.maxAge} 
-   milliseconds.<br><br>
-   <a href="/logout">Log Out</a><br><br>
-   <a href="/secret">Members Only</a>`);
-});
+   res.redirect('/professors/edit/' + req.user.username);
+}
+);
 
 app.get('/logout', function(req, res) {
   req.logout();
   res.redirect('/login');
 });
 
-app.get('/professors',ProfessorController.getAllProfessors, (req,res,next) => {
+app.get('/professors',ProfessorController.getAllProfessors, connectEnsureLogin.ensureLoggedIn(),(req,res,next) => {
   res.render("professors",{professors:req.data});
 });
 
-app.get('/professors/edit/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("editprof",{professors:req.data});
+app.get('/professors/edit/:name',ProfessorController.getProfessor, connectEnsureLogin.ensureLoggedIn(),(req,res,next) => {
+  if(req.data[0].name == req.user.username){
+    res.render("editprof",{professors:req.data});
+  }else{
+    res.status(403);
+    res.sendFile('static/forbidden.html', {root: __dirname });
+  }
+
 });
 
 app.post("/saveprof", ProfessorController.saveProfessor);
@@ -114,9 +114,8 @@ app.get('/testAuthFail', (req,res,next) => {
 //when you log in, will direct you to your link
 
 app.get('/professors/klump/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("editprof",{professors:req.data});
+  res.render("professors",{professors:req.data});
 });
-app.post("/saveprof", ProfessorController.saveProfessor);
 
 app.get('/professors/ramsey/:name',ProfessorController.getProfessor,(req,res,next) => {
   res.render("professors",{professors:req.data});
