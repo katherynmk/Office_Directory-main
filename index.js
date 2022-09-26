@@ -114,8 +114,9 @@ app.get('/testAuthFail', (req,res,next) => {
 //when you log in, will direct you to your link
 
 app.get('/professors/klump/:name',ProfessorController.getProfessor,(req,res,next) => {
-  res.render("professors",{professors:req.data});
+  res.render("editprof",{professors:req.data});
 });
+app.post("/saveprof", ProfessorController.saveProfessor);
 
 app.get('/professors/ramsey/:name',ProfessorController.getProfessor,(req,res,next) => {
   res.render("professors",{professors:req.data});
